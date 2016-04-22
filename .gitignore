@@ -1,0 +1,4 @@
+.idea
+properties.yml
+*.tar.gz
+*.pyc
