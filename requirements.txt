@@ -1,2 +1,2 @@
 serial_device
-dropbot-dx>=1.0
+dropbot-dx>=1.0.post1

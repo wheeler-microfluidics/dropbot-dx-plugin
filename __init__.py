@@ -234,7 +234,10 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         Handler called just before the Microdrop application exits.
         """
         self.cleanup_plugin()
-        self.control_board.hv_output_enabled = False
+        try:
+            self.control_board.hv_output_enabled = False
+        except: # ignore any exceptions (e.g., if the board is not connected)
+            pass
 
     def on_protocol_swapped(self, old_protocol, protocol):
         self._update_protocol_grid()
@@ -283,6 +286,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             # try to connect to the last successful port
             try:
                 self.control_board = SerialProxy(port=str(app_values['serial_port']))
+                self.control_board.initialize_switching_boards()
             except RuntimeError, why:
                 logger.warning('Could not connect to control board on port %s.'
                                ' Checking other ports... [%s]' %
