@@ -286,13 +286,12 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             # try to connect to the last successful port
             try:
                 self.control_board = SerialProxy(port=str(app_values['serial_port']))
-                self.control_board.initialize_switching_boards()
-            except RuntimeError, why:
+            except:
                 logger.warning('Could not connect to control board on port %s.'
-                               ' Checking other ports... [%s]' %
-                               (app_values['serial_port'], why))
-                
+                               ' Checking other ports...', 
+                               app_values['serial_port'], exc_info=True)
                 self.control_board = SerialProxy()
+            self.control_board.initialize_switching_boards()
             app_values['serial_port'] = self.control_board.port
             self.set_app_values(app_values)
         else:
