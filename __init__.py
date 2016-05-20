@@ -312,7 +312,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             self.connect()
             name = self.control_board.properties['package_name']
             if name != self.control_board.host_package_name:
-                raise Exception("Device is not a DropBot V3")
+                raise Exception("Device is not a DropBot DX")
 
             host_software_version = self.control_board.host_software_version
             remote_software_version = self.control_board.remote_software_version
@@ -364,10 +364,11 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             properties = self.control_board.properties
             version = self.control_board.hardware_version
             n_channels = self.control_board.number_of_channels
-            serial_number = self.control_board.serial_number
-            self.connection_status = ('%s v%s (Firmware: %s, S/N %03d)\n'
+            id = self.control_board.id
+            uuid = self.control_board.uuid
+            self.connection_status = ('%s v%s (Firmware: %s, id: %s, uuid: %s)\n'
                 '%d channels' % (properties['display_name'], version,
-                                 properties['software_version'], serial_number,
+                                 properties['software_version'], id, str(uuid)[:8],
                                  n_channels))
 
         app.main_window_controller.label_control_board_status\
@@ -516,13 +517,15 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             if val:
                 return
 
-        # otherwise, add the name, hardware version, serial number,
-        # and firmware version
+        # add the name, hardware version, id, and firmware version to the experiment
+        # log metadata
         data = {}
         if self.control_board:
             data["control board name"] = self.control_board.properties['display_name']
-            data["control board serial number"] = \
-                self.control_board.serial_number
+            data["control board id"] = \
+                self.control_board.id
+            data["control board uuid"] = \
+                self.control_board.uuid
             data["control board hardware version"] = (self.control_board
                                                       .hardware_version)
             data["control board software version"] = (self.control_board
@@ -535,6 +538,9 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
                 pass
             """
         log.add_data(data)
+
+        # add metadata to experiment log
+        log.metadata[self.name] = data
 
     def get_schedule_requests(self, function_name):
         """
