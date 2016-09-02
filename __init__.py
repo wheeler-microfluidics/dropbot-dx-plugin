@@ -16,26 +16,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with opendrop_plugin.  If not, see <http://www.gnu.org/licenses/>.
 """
-import os
-import math
-import re
-from copy import deepcopy
+import logging
 import warnings
 
 import tables
 import json
-from datetime import datetime
-from pygtkhelpers.ui.dialogs import info as info_dialog
-import yaml
 import gtk
 import gobject
 import numpy as np
 from path_helpers import path
-from flatland import Integer, Boolean, Float, Form, Enum, String
-from flatland.validation import ValueAtLeast, ValueAtMost, Validator
+from flatland import Integer, Float, Form, Enum
+from flatland.validation import ValueAtLeast
 import microdrop_utility as utility
-from microdrop_utility.gui import yesno, FormViewDialog
-from microdrop.logger import logger
+from microdrop_utility.gui import yesno
 from microdrop.gui.protocol_grid_controller import ProtocolGridController
 from microdrop.plugin_helpers import (StepOptionsController, AppDataController,
                                       get_plugin_info)
@@ -45,14 +38,14 @@ from microdrop.plugin_manager import (IPlugin, IWaveformGenerator, Plugin,
                                       get_service_instance,
                                       get_service_instance_by_name)
 from microdrop.app_context import get_app, get_hub_uri
-from microdrop.dmf_device import DeviceScaleNotSet
-from serial_device import SerialDevice, get_serial_ports
+from serial_device import get_serial_ports
 from dropbot_dx import SerialProxy
 from zmq_plugin.plugin import Plugin as ZmqPlugin
 from zmq_plugin.schema import decode_content_data
 import zmq
-import gobject
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # Ignore natural name warnings from PyTables [1].
 #
@@ -195,8 +188,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         else:
             app = get_app()
             connected = self.control_board != None
-            if connected and (app.realtime_mode or
-                              app.running):
+            if connected and (app.realtime_mode or app.running):
                 self.on_step_run()
 
     def cleanup_plugin(self):
@@ -243,8 +235,6 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         self._update_protocol_grid()
 
     def _update_protocol_grid(self):
-        app = get_app()
-        app_values = self.get_app_values()
         pgc = get_service_instance(ProtocolGridController, env='microdrop')
         if pgc.enabled_fields:
             pgc.update_grid()
@@ -262,7 +252,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
 
             if reconnect:
                 self.connect()
-                
+
             self._update_protocol_grid()
         elif plugin_name == app.name:
             # Turn off all electrodes if we're not in realtime mode and not
@@ -288,7 +278,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
                 self.control_board = SerialProxy(port=str(app_values['serial_port']))
             except:
                 logger.warning('Could not connect to control board on port %s.'
-                               ' Checking other ports...', 
+                               ' Checking other ports...',
                                app_values['serial_port'], exc_info=True)
                 self.control_board = SerialProxy()
             self.control_board.initialize_switching_boards()
@@ -387,7 +377,6 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         self._kill_running_step()
         app = get_app()
         options = self.get_step_options()
-        app_values = self.get_app_values()
 
         if (self.control_board and (app.realtime_mode or app.running)):
             max_channels = self.control_board.number_of_channels
@@ -495,8 +484,6 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         logger.debug('[DropBotDxPlugin] on_step_options_changed(): %s '
                      'step #%d' % (plugin, step_number))
         app = get_app()
-        app_values = self.get_app_values()
-        options = self.get_step_options(step_number)
         if (app.protocol and not app.running and not app.realtime_mode and
             (plugin == 'microdrop.gui.dmf_device_controller' or plugin ==
              self.name) and app.protocol.current_step_number == step_number):
