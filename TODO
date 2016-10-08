@@ -1,0 +1,14 @@
+Create Conda recipes for the following required packages:
+
+ - arduino-helpers-0.3.post18
+ - arduino-memory-0.1.post3
+ - arduino-rpc-1.7.post20
+ - arduino-scons-0.1.post11
+ - base-node-rpc-0.16.post3
+ - c-array-defs-0.2
+ - clang-helpers-0.3
+ - dropbot-dx-1.1.post3
+ - nadamq-0.8.post1
+ - nanopb-helpers-0.4.post1
+ - protobuf-3.1.0.post1
+ - serial-device-0.2
