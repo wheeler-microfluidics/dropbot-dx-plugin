@@ -56,18 +56,18 @@ PluginGlobals.push_env('microdrop.managed')
 
 
 class DmfZmqPlugin(ZmqPlugin):
-    '''
+    """
     API for adding/clearing droplet routes.
-    '''
+    """ 
     def __init__(self, parent, *args, **kwargs):
         self.parent = parent
         super(DmfZmqPlugin, self).__init__(*args, **kwargs)
 
     def check_sockets(self):
-        '''
+        """ 
         Check for messages on command and subscription sockets and process
         any messages accordingly.
-        '''
+        """ 
         try:
             msg_frames = self.command_socket.recv_multipart(zmq.NOBLOCK)
         except zmq.Again:
@@ -150,21 +150,25 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
     AppFields = Form.of(
         Enum.named('serial_port').using(default=default_port_,
                                         optional=True).valued(*serial_ports_),
-    )
+        Float.named('default_duration').using(default=1000,
+                                              optional=True),
+        Float.named('default_voltage').using(default=80,
+                                             optional=True),
+        Float.named('default_frequency').using(default=10e3,
+                                               optional=True),
 
-    StepFields = Form.of(
-        Integer.named('duration').using(default=100, optional=True,
-                                        validators=
-                                        [ValueAtLeast(minimum=0), ]),
-        Float.named('voltage').using(default=100, optional=True,
-                                     validators=[ValueAtLeast(minimum=0),
-                                                 max_voltage]),
-        Float.named('frequency').using(default=10e3, optional=True,
-                                       validators=[ValueAtLeast(minimum=0),
-                                                   check_frequency]),
     )
 
     version = get_plugin_info(path(__file__).parent).version
+
+    @property
+    def StepFields(self):
+        """
+        Expose StepFields as a property to avoid breaking code that accesses
+        the StepFields member (vs through the get_step_form_class method).
+        """
+        return self.get_step_form_class()
+    
 
     def __init__(self):
         self.control_board = None
@@ -176,6 +180,26 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         self.plugin = None
         self.plugin_timeout_id = None
 
+    def get_step_form_class(self):
+        """ 
+        Override to set default values based on their corresponding app options.
+        """ 
+        app = get_app()
+        app_values = self.get_app_values()
+        return Form.of(
+            Integer.named('duration').using(default=app_values['default_duration'],
+                                            optional=True,
+                                            validators=
+                                            [ValueAtLeast(minimum=0), ]),
+            Float.named('voltage').using(default=app_values['default_voltage'],
+                                         optional=True,
+                                         validators=[ValueAtLeast(minimum=0),
+                                                     max_voltage]),
+            Float.named('frequency').using(default=app_values['default_frequency'],
+                                           optional=True,
+                                           validators=[ValueAtLeast(minimum=0),
+                                                       check_frequency]),
+    )
     def update_channel_states(self, channel_states):
         # Update locally cached channel states with new modified states.
         try:
@@ -263,13 +287,13 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
                 self.control_board.hv_output_enabled = False
 
     def connect(self):
-        '''
+        """ 
         Try to connect to the control board at the default serial port selected
         in the Microdrop application options.
 
         If unsuccessful, try to connect to the control board on any available
         serial port, one-by-one.
-        '''
+        """
         self.current_frequency = None
         if len(DropBotDxPlugin.serial_ports_):
             app_values = self.get_app_values()
@@ -288,7 +312,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             raise Exception("No serial ports available.")
 
     def check_device_name_and_version(self):
-        '''
+        """
         Check to see if:
 
          a) The connected device is a OpenDrop
@@ -297,7 +321,7 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
         In the case where the device firmware version does not match, display a
         dialog offering to flash the device with the firmware version that
         matches the host driver API version.
-        '''
+        """ 
         try:
             self.connect()
             name = self.control_board.properties['package_name']
@@ -326,12 +350,12 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             connected = self.control_board != None
             if not connected:
                 self.connect()
-            '''
+            """
             response = yesno("Save current control board configuration before "
                              "flashing?")
             if response == gtk.RESPONSE_YES:
                 self.save_config()
-            '''
+            """ 
             hardware_version = utility.Version.fromstring(
                 self.control_board.hardware_version
             )
@@ -393,6 +417,12 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
                         interface=IWaveformGenerator)
             if not self.control_board.hv_output_enabled:
                 self.control_board.hv_output_enabled = True
+
+            label = (self.connection_status + ', Voltage: %.1f V' %
+                 self.control_board.measured_voltage)
+            app.main_window_controller.label_control_board_status. \
+                set_markup(label)
+
 
             self.control_board.set_state_of_channels(channel_states)
 
