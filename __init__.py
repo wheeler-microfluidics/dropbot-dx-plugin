@@ -418,6 +418,12 @@ class DropBotDxPlugin(Plugin, StepOptionsController, AppDataController):
             if not self.control_board.hv_output_enabled:
                 self.control_board.hv_output_enabled = True
 
+            label = (self.connection_status + ', Voltage: %.1f V' %
+                 self.control_board.measured_voltage)
+            app.main_window_controller.label_control_board_status. \
+                set_markup(label)
+
+
             self.control_board.set_state_of_channels(channel_states)
 
         # if a protocol is running, wait for the specified minimum duration
